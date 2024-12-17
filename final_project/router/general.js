@@ -39,44 +39,89 @@ public_users.post("/register", (req,res) => {
 
 });
 
+function getBooksAsync() {
+    return new Promise((resolve, reject) => {
+      // Simulate asynchronous operation (e.g., database query)
+      setTimeout(() => {
+        if (books) {
+          resolve(books); // Resolve with the book list
+        } else {
+          reject("No books available"); // Reject with an error message
+        }
+      }, 1000); // Simulate 1-second delay
+    });
+  }
 // Get the book list available in the shop
 public_users.get('/',function (req, res) {
   //Write your code here
-  res.send(JSON.stringify(books,null,4));
+  getBooksAsync()
+    .then((books) => {
+      // On success, send the book list as a JSON response
+      res.send(JSON.stringify(books, null, 4));
+    })
+    .catch((error) => {
+      // On error, send the error message
+      res.status(500).send(error);
+    });
 });
 
 // Get book details based on ISBN
 public_users.get('/isbn/:isbn',function (req, res) {
   //Write your code here
-    const isbn = req.params.isbn;
-    if(isbn){
-        const bks = books[isbn]
-        if(bks){
-            res.send(JSON.stringify(bks,null,4));
+  const isbn = req.params.isbn;
+  let myPromise = new Promise((resolve, reject) => {
+    setTimeout(() => {
+      if (isbn) {
+        const bks = books[isbn]; // Assuming `books` is an object with ISBN as keys
+        if (bks) {
+          resolve(bks); // Resolve with the book data
+        } else {
+          reject("Sorry, no book found"); // Reject if the book is not found
         }
-        else{
-            res.send("Sorry, no book found");
-        }
-    }
-    else{
-        res.send("Please, enter the isbn");
-    }
+      } else {
+        reject("Please, enter the ISBN"); // Reject if no ISBN is provided
+      }
+    }, 6000); // Simulate a 6-second delay
+  });
+
+  // Handle the resolved or rejected promise
+  myPromise
+    .then((book) => {
+      // Send the book data as JSON when the promise resolves
+      res.send(JSON.stringify(book, null, 4));
+    })
+    .catch((errorMessage) => {
+      // Send the error message when the promise is rejected
+      res.status(400).send(errorMessage);
+    });
+    
+    
  });
   
 // Get book details based on author
-public_users.get('/author/:author',function (req, res) {
+public_users.get('/author/:author',async function (req, res) {
   //Write your code here
   const author = req.params.author;
 
-  const filteredBooks = Object.values(books).filter(book => book.author === author);
+  try {
+    const filteredBooks = await new Promise((resolve, reject) => {
+      setTimeout(() => {
+        const booksByAuthor = Object.values(books).filter(book => book.author === author);
 
-  // If no books are found, return an error response
-  if (filteredBooks.length === 0) {
-    return res.status(404).json({ message: "No books found for the specified author." });
+        if (booksByAuthor.length > 0) {
+          resolve(booksByAuthor); // Resolve if books are found
+        } else {
+          reject("No books found for the specified author."); // Reject if no books are found
+        }
+      }, 2000);
+    });
+
+    // Send the filtered books
+    res.status(200).json(filteredBooks);
+  } catch (error) {
+    // Send the error message
+    res.status(404).json({ message: error });
   }
-
-  // Return the matching books
-  return res.status(200).json(filteredBooks);
     
 });
 
